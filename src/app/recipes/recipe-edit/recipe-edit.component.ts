@@ -77,7 +77,7 @@ export class RecipeEditComponent implements OnInit {
   }
 
   get controls() {
-    return (<FormArray>this.recipeForm.get('ingredients') as FormArray).controls;
+    return (<FormArray>this.recipeForm.get('ingredients')).controls;
   }
 
   // Add blank form group for an ingredient every time you hit Add Ingredient
@@ -97,4 +97,7 @@ export class RecipeEditComponent implements OnInit {
     this.router.navigateByUrl(`/recipes/${this.id}`);
   }
 
+  onDeleteIngredient(index: number) {
+    (<FormArray>this.recipeForm.get('ingredients')).removeAt(index);
+  }
 }

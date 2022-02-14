@@ -19,6 +19,7 @@ export interface AuthResponseData {
 })
 export class AuthService {
   user = new BehaviorSubject<User>(null);
+  private expirationTimer: any;
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -70,7 +71,12 @@ export class AuthService {
 
   logout() {
     this.user.next(null);
-    this.router.navigateByUrl("/auth");
+    this.router.navigateByUrl('/auth');
+    localStorage.clear();
+    if (this.expirationTimer) {
+      clearTimeout(this.expirationTimer);
+    };
+    this.expirationTimer = null;
   }
 
   private handleError(errorRes: HttpErrorResponse) {
@@ -92,23 +98,33 @@ export class AuthService {
 
   autoLogin() {
     const userData: {
-      email: string,
-      id: string,
-      _token: string,
-      _tokenExpiration: Date
-    } = JSON.parse(localStorage.getItem("userData"));
+      email: string;
+      id: string;
+      _token: string;
+      _tokenExpiration: Date;
+    } = JSON.parse(localStorage.getItem('userData'));
     if (!userData) {
       return;
     }
 
-    const loadedUser = new User(userData.email, userData.id, userData._token, new Date(userData._tokenExpiration));
+    const loadedUser = new User(
+      userData.email,
+      userData.id,
+      userData._token,
+      new Date(userData._tokenExpiration)
+    );
 
     if (loadedUser.token) {
       this.user.next(loadedUser);
-    } else {
-      
+      const expirationDuration = new Date(userData._tokenExpiration).getTime() - new Date().getTime();
+      this.autoLogout(expirationDuration);
     }
+  }
 
+  autoLogout(expirationDuration: number) {
+    this.expirationTimer = setTimeout(() => {
+      this.logout();
+    }, expirationDuration);
   }
 
   private handleAuthentication(
@@ -120,6 +136,7 @@ export class AuthService {
     const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);
     const user = new User(email, userId, token, expirationDate);
     this.user.next(user);
-    localStorage.setItem("userData", JSON.stringify(user));
+    this.autoLogout(expiresIn * 1000);
+    localStorage.setItem('userData', JSON.stringify(user));
   }
 }
